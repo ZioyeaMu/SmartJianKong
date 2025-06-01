@@ -1,0 +1,4 @@
+train: ./mydataset/1/images
+val: ./mydataset/1/images
+nc: 3
+names: ['mouse', 'laptop', 'fall']
