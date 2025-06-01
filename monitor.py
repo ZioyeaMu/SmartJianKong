@@ -5,7 +5,7 @@ import cv2
 import uuid
 import base64
 import argparse
-import json  # 新增json模块导入
+import json
 from library.BemfaCloud_V20250325 import BemfaCloud
 
 
@@ -88,21 +88,21 @@ class CameraUploader:
             if command == 'capture':
                 logging.info("执行拍照命令")
                 self.capture_photo()
+                self.bfc.send('successfully')
+                try:
+                    logging.info("已发送成功消息到巴法云")
+                except Exception as e:
+                    logging.error(f"发送成功消息失败: {str(e)}")
 
             elif command == 'record':
                 logging.info("执行录像命令")
-                duration = 10
-                if 'duration' in msg_dict:
-                    try:
-                        duration = int(msg_dict['duration'])
-                    except ValueError:
-                        pass
-                self.record_video(duration=duration)
+                self.record_video()  # 固定3秒录像时长
 
             elif command == 'shutdown':
                 logging.info("执行关机命令")
                 self.power = False
-
+            elif command == 'who':
+                self.bfc.send('me')
             else:
                 logging.warning(f"未知命令: {command} 完整消息: {msg_dict}")
 
@@ -119,42 +119,42 @@ class CameraUploader:
             if not cap.isOpened():
                 raise Exception("无法打开摄像头")
 
-            # 设置分辨率
             cap.set(3, resolution[0])
             cap.set(4, resolution[1])
 
             ret, frame = cap.read()
             if ret:
-                # 临时保存照片
                 temp_path = f"./temp_{filename}"
                 cv2.imwrite(temp_path, frame)
                 logging.info(f"照片已保存到 {temp_path}")
 
-                # 上传到巴法云
                 if self.bfc.upload_image(temp_path):
                     logging.info("照片上传成功")
+                    # 发送成功消息
+                    success_msg = "msg=capture successfully"
+                    self.bfc.socket.send(success_msg.encode('utf-8'))
                 else:
-                    logging.error("照片上传失败")
+                    # 发送失败消息
+                    fail_msg = "msg=capture failed"
+                    self.bfc.socket.send(fail_msg.encode('utf-8'))
 
-                # 删除临时文件
                 os.remove(temp_path)
             else:
                 logging.error("无法捕获照片")
+                # 发送失败消息
+                fail_msg = "msg=capture failed: no frame captured"
+                self.bfc.socket.send(fail_msg.encode('utf-8'))
         except Exception as e:
             logging.error(f"拍照出错: {str(e)}")
+            # 发送错误消息
+            error_msg = f"msg=capture error: {str(e)}"
+            self.bfc.socket.send(error_msg.encode('utf-8'))
         finally:
             cap.release()
 
-    def record_video(self, duration=10, filename=None, fps=20.0, resolution=(1280, 720)):
-        """录制视频并上传"""
-        if filename is None:
-            filename = f"video_{time.strftime('%Y%m%d%H%M%S')}.mp4"
-
-        temp_path = f"./temp_{filename}"
+    def record_video(self, duration=3, fps=20.0, resolution=(1280, 720)):
+        """录制视频并抽帧截图上传"""
         cap = cv2.VideoCapture(0)
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(temp_path, fourcc, fps, resolution)
-
         try:
             if not cap.isOpened():
                 raise Exception("无法打开摄像头")
@@ -163,37 +163,59 @@ class CameraUploader:
             cap.set(3, resolution[0])
             cap.set(4, resolution[1])
 
-            logging.info(f"开始录制 {duration} 秒视频...")
+            logging.info(f"开始录制 {duration} 秒视频并抽帧截图...")
             start_time = time.time()
+            frame_count = 0
+            frames_to_capture = 5  # 总共截取5帧
+            success_count = 0
 
             while (time.time() - start_time) < duration:
                 ret, frame = cap.read()
                 if not ret:
                     break
-                out.write(frame)
+
+                frame_count += 1
+
+                # 均匀地截取5帧
+                if frame_count % (int(duration * fps / frames_to_capture)) == 0:
+                    temp_path = f"./temp_frame_{frame_count}_{time.strftime('%Y%m%d%H%M%S')}.jpg"
+                    cv2.imwrite(temp_path, frame)
+                    logging.info(f"截取第 {frame_count} 帧并保存到 {temp_path}")
+
+                    # 使用capture_photo中的上传逻辑
+                    if self.bfc.upload_image(temp_path):
+                        logging.info(f"第 {frame_count} 帧上传成功")
+                        success_count += 1
+                        # 发送成功消息
+                        success_msg = f"msg=frame {frame_count} upload successfully"
+                        self.bfc.socket.send(success_msg.encode('utf-8'))
+                    else:
+                        logging.error(f"第 {frame_count} 帧上传失败")
+                        # 发送失败消息
+                        fail_msg = f"msg=frame {frame_count} upload failed"
+                        self.bfc.socket.send(fail_msg.encode('utf-8'))
+
+                    # 删除临时文件
+                    if os.path.exists(temp_path):
+                        os.remove(temp_path)
 
                 # 按'q'键可提前结束
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-            logging.info(f"视频已保存到 {temp_path}")
-
-            # 上传视频（注意：原始BemfaCloud可能只支持图片上传）
-            # 这里我们尝试上传，但可能需要修改BemfaCloud库
-            if self.bfc.upload_image(temp_path):  # 可能需要改为upload_video
-                logging.info("视频上传成功")
-            else:
-                logging.error("视频上传失败")
+            # 发送总结消息
+            summary_msg = f"msg=record completed, {success_count}/{frames_to_capture} frames uploaded"
+            self.bfc.socket.send(summary_msg.encode('utf-8'))
+            logging.info(f"视频抽帧截图完成，共上传 {success_count}/{frames_to_capture} 帧")
 
         except Exception as e:
-            logging.error(f"录像出错: {str(e)}")
+            logging.error(f"录像抽帧出错: {str(e)}")
+            # 发送错误消息
+            error_msg = f"msg=record error: {str(e)}"
+            self.bfc.socket.send(error_msg.encode('utf-8'))
         finally:
-            out.release()
             cap.release()
             cv2.destroyAllWindows()
-            if os.path.exists(temp_path):
-                os.remove(temp_path)
-
     def run(self):
         """运行主消息循环"""
         try:
