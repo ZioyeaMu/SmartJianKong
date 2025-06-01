@@ -12,7 +12,7 @@ import argparse
 import numpy as np
 import uuid
 import base64
-# aaaaa
+# aa
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'YOLOv5_Lite_master')))
 from YOLOv5_Lite_master import mydetect as yv5d
 from library.BemfaCloud_V20250325 import BemfaCloud
