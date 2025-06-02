@@ -9,7 +9,7 @@ import json
 from library.BemfaCloud_V20250325 import BemfaCloud
 
 
-# 配置日志
+# 配置日志1
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
