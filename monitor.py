@@ -10,11 +10,14 @@ from library.BemfaCloud_V20250325 import BemfaCloud
 
 
 # 配置日志
-def setup_logging():
+def setup_logging(log_file="logfile.log"):
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        filename=log_file,  # 日志文件
+        level=logging.DEBUG,  # 最低日志级别
+        format="%(asctime)s - %(levelname)s - %(message)s",  # 日志格式
+        datefmt="%Y-%m-%d %H:%M:%S",  # 时间格式
+        encoding='utf-8',  # 指定UTF-8编码
+        # stream=sys.stdout
     )
 
 
@@ -28,17 +31,24 @@ def get_device_id():
     return base64_string[:6].replace('+', 'A').replace('/', 'B')
 
 
-class CameraUploader:
+class System:
     def __init__(self):
-        setup_logging()
         self.device_id = get_device_id()
         self.uid = '865c32af7d4c73322601d512f8b45b14'
         self.msg_topic = 'test1'
         self.img_topic = 'test'
+        self.power = True
+        self.log_dir = './logs/'  # 日志路径
+        self.run_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())  # 系统运行时间
+        # 设置日志配置
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        setup_logging("./logs/" + self.run_time + ".txt")
+
+        logging.info("系统已于" + self.run_time + "启动")
 
         # 初始化巴法云连接
-        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic,
-                              img_topic=self.img_topic, device_name=self.device_id)
+        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic, img_topic=self.img_topic, device_name=self.device_id)
         self.power = True
         self.last_heartbeat = time.time()
 
@@ -88,7 +98,6 @@ class CameraUploader:
             if command == 'capture':
                 logging.info("执行拍照命令")
                 self.capture_photo()
-
             elif command == 'record':
                 logging.info("执行录像命令")
                 duration = 10
@@ -98,11 +107,11 @@ class CameraUploader:
                     except ValueError:
                         pass
                 self.record_video(duration=duration)
-
             elif command == 'shutdown':
                 logging.info("执行关机命令")
                 self.power = False
-
+            elif command == 'who':
+                self.bfc.send('me')
             else:
                 logging.warning(f"未知命令: {command} 完整消息: {msg_dict}")
 
@@ -242,5 +251,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='通过巴法云消息控制摄像头')
     args = parser.parse_args()
 
-    uploader = CameraUploader()
-    uploader.run()
+    system = System()
+    system.run()
