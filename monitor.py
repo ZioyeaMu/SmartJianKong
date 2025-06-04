@@ -10,11 +10,14 @@ from library.BemfaCloud_V20250325 import BemfaCloud
 
 
 # 配置日志
-def setup_logging():
+def setup_logging(log_file="logfile.log"):
     logging.basicConfig(
-        level=logging.INFO,
-        format="%(asctime)s - %(levelname)s - %(message)s",
-        datefmt="%Y-%m-%d %H:%M:%S"
+        filename=log_file,  # 日志文件
+        level=logging.DEBUG,  # 最低日志级别
+        format="%(asctime)s - %(levelname)s - %(message)s",  # 日志格式
+        datefmt="%Y-%m-%d %H:%M:%S",  # 时间格式
+        encoding='utf-8',  # 指定UTF-8编码
+        # stream=sys.stdout
     )
 
 
@@ -28,24 +31,31 @@ def get_device_id():
     return base64_string[:6].replace('+', 'A').replace('/', 'B')
 
 
-class CameraUploader:
+class System:
     def __init__(self):
-        setup_logging()
         self.device_id = get_device_id()
         self.uid = '865c32af7d4c73322601d512f8b45b14'
         self.msg_topic = 'test1'
         self.img_topic = 'test'
+        self.power = True
+        self.log_dir = './logs/'  # 日志路径
+        self.run_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())  # 系统运行时间
+        # 设置日志配置
+        if not os.path.exists(self.log_dir):
+            os.makedirs(self.log_dir)
+        setup_logging("./logs/" + self.run_time + ".txt")
+
+        logging.info("系统已于" + self.run_time + "启动")
 
         # 初始化巴法云连接
-        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic,
-                              img_topic=self.img_topic, device_name=self.device_id)
+        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic, img_topic=self.img_topic,
+                              device_name=self.device_id)
         self.power = True
         self.last_heartbeat = time.time()
 
         # 连接服务器
         self._connect()
         logging.info("初始化完成，设备ID: %s", self.device_id)
-
     def _connect(self):
         """连接服务器"""
         self.bfc.connect()
@@ -82,29 +92,30 @@ class CameraUploader:
                 except json.JSONDecodeError:
                     pass  # 如果不是JSON，保持原样
 
-            # 现在可以直接从msg_dict获取命令
-            command = msg_dict.get('msg', '').lower()
+            if msg_dict.get('target', '') == 'all' or msg_dict.get('target', '') == self.device_id:
+                # 现在可以直接从msg_dict获取命令
+                command = msg_dict.get('msg', '').lower()
 
-            if command == 'capture':
-                logging.info("执行拍照命令")
-                self.capture_photo()
-                self.bfc.send('successfully')
-                try:
-                    logging.info("已发送成功消息到巴法云")
-                except Exception as e:
-                    logging.error(f"发送成功消息失败: {str(e)}")
+                if command == 'capture':
+                    logging.info("执行拍照命令")
+                    self.capture_photo()
+                    self.bfc.send('successfully')
+                    try:
+                        logging.info("已发送成功消息到巴法云")
+                    except Exception as e:
+                        logging.error(f"发送成功消息失败: {str(e)}")
 
-            elif command == 'record':
-                logging.info("执行录像命令")
-                self.record_video()  # 固定3秒录像时长
+                elif command == 'record':
+                    logging.info("执行录像命令")
+                    self.record_video()  # 固定3秒录像时长
 
-            elif command == 'shutdown':
-                logging.info("执行关机命令")
-                self.power = False
-            elif command == 'who':
-                self.bfc.send('me')
-            else:
-                logging.warning(f"未知命令: {command} 完整消息: {msg_dict}")
+                elif command == 'shutdown':
+                    logging.info("执行关机命令")
+                    self.power = False
+                elif command == 'who':
+                    self.bfc.send('me')
+                else:
+                    logging.warning(f"未知命令: {command} 完整消息: {msg_dict}")
 
         except Exception as e:
             logging.error(f"处理消息出错: {str(e)} 原始消息: {msg_dict}")
@@ -134,6 +145,7 @@ class CameraUploader:
                     success_msg = "msg=capture successfully"
                     self.bfc.socket.send(success_msg.encode('utf-8'))
                 else:
+                    logging.error("照片上传失败")
                     # 发送失败消息
                     fail_msg = "msg=capture failed"
                     self.bfc.socket.send(fail_msg.encode('utf-8'))
@@ -255,5 +267,5 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='通过巴法云消息控制摄像头')
     args = parser.parse_args()
 
-    uploader = CameraUploader()
-    uploader.run()
+    system = System()
+    system.run()
