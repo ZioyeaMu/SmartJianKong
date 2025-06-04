@@ -92,28 +92,28 @@ class System:
                 except json.JSONDecodeError:
                     pass  # 如果不是JSON，保持原样
 
-            # 现在可以直接从msg_dict获取命令
-            command = msg_dict.get('msg', '').lower()
-
-            if command == 'capture':
-                logging.info("执行拍照命令")
-                self.capture_photo()
-            elif command == 'record':
-                logging.info("执行录像命令")
-                duration = 10
-                if 'duration' in msg_dict:
-                    try:
-                        duration = int(msg_dict['duration'])
-                    except ValueError:
-                        pass
-                self.record_video(duration=duration)
-            elif command == 'shutdown':
-                logging.info("执行关机命令")
-                self.power = False
-            elif command == 'who':
-                self.bfc.send('me')
-            else:
-                logging.warning(f"未知命令: {command} 完整消息: {msg_dict}")
+            if msg_dict.get('target', '') == 'all' or msg_dict.get('target', '') == self.device_id:
+                # 现在可以直接从msg_dict获取命令
+                command = msg_dict.get('msg', '').lower()
+                if command == 'capture':
+                    logging.info("执行拍照命令")
+                    self.capture_photo()
+                elif command == 'record':
+                    logging.info("执行录像命令")
+                    duration = 10
+                    if 'duration' in msg_dict:
+                        try:
+                            duration = int(msg_dict['duration'])
+                        except ValueError:
+                            pass
+                    self.record_video(duration=duration)
+                elif command == 'shutdown':
+                    logging.info("执行关机命令")
+                    self.power = False
+                elif command == 'who':
+                    self.bfc.send('me')
+                else:
+                    logging.warning(f"未知命令: {command} 完整消息: {msg_dict}")
 
         except Exception as e:
             logging.error(f"处理消息出错: {str(e)} 原始消息: {msg_dict}")
