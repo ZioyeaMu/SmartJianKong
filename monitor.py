@@ -97,7 +97,7 @@ class CameraUploader:
             elif command == 'record':
                 logging.info("执行录像命令")
                 self.record_video()  # 固定3秒录像时长
-
+                self.bfc.send('successfully')
             elif command == 'shutdown':
                 logging.info("执行关机命令")
                 self.power = False
@@ -190,7 +190,7 @@ class CameraUploader:
                         success_msg = f"msg=frame {frame_count} upload successfully"
                         self.bfc.socket.send(success_msg.encode('utf-8'))
                     else:
-                        logging.error(f"第 {frame_count} 帧上传失败")
+                        success_count += 1
                         # 发送失败消息
                         fail_msg = f"msg=frame {frame_count} upload failed"
                         self.bfc.socket.send(fail_msg.encode('utf-8'))

@@ -132,7 +132,7 @@ class BemfaCloud:
     def send(self, msg):
         data = {
             "user": self.device_name,
-            "time": time.time(),
+            "time": str(time.time()),
             "msg": msg,
             "target": "admin"
         }
