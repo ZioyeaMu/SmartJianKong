@@ -55,9 +55,9 @@ from utils.general import (
     print_args,
     yaml_save,
 )
-from yolov5_master.yolov5.utils.loggers import GenericLogger
-from yolov5_master.yolov5.utils.plots import imshow_cls
-from yolov5_master.yolov5.utils.torch_utils import (
+from utils.loggers import GenericLogger
+from utils.plots import imshow_cls
+from utils.torch_utils import (
     ModelEMA,
     de_parallel,
     model_info,
@@ -318,7 +318,7 @@ def parse_opt(known=False):
     parser.add_argument("--model", type=str, default="yolov5m-cls.pt", help="initial weights path")
     parser.add_argument("--data", type=str, default=r".\my_datas", help="cifar10, cifar100, mnist, imagenet, ...")
     parser.add_argument("--epochs", type=int, default=44, help="total training epochs")
-    parser.add_argument("--batch-size", type=int, default=64, help="total batch size for all GPUs")
+    parser.add_argument("--batch-size", type=int, default=1, help="total batch size for all GPUs")
     parser.add_argument("--imgsz", "--img", "--img-size", type=int, default=224, help="train, val image size (pixels)")
     parser.add_argument("--nosave", action="store_true", help="only save final checkpoint")
     parser.add_argument("--cache", type=str, nargs="?", const="ram", help='--cache images in "ram" (default) or "disk"')
