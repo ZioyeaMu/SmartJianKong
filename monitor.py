@@ -165,57 +165,48 @@ class CameraUploader:
 
             logging.info(f"开始录制 {duration} 秒视频并抽帧截图...")
             start_time = time.time()
-            frame_count = 0
-            frames_to_capture = 5  # 总共截取5帧
+            total_frames = int(duration * fps)
+            frames_to_capture = 5
+            capture_interval = max(1, total_frames // frames_to_capture)
             success_count = 0
 
-            while (time.time() - start_time) < duration:
+            for frame_count in range(1, total_frames + 1):
                 ret, frame = cap.read()
                 if not ret:
                     break
 
-                frame_count += 1
-
                 # 均匀地截取5帧
-                if frame_count % (int(duration * fps / frames_to_capture)) == 0:
+                if frame_count % capture_interval == 0:
                     temp_path = f"./temp_frame_{frame_count}_{time.strftime('%Y%m%d%H%M%S')}.jpg"
                     cv2.imwrite(temp_path, frame)
                     logging.info(f"截取第 {frame_count} 帧并保存到 {temp_path}")
 
-                    # 使用capture_photo中的上传逻辑
-                    if self.bfc.upload_image(temp_path):
+                    # 检查upload_image实现是否一致
+                    upload_result = self.bfc.upload_image(temp_path)
+                    if upload_result:
                         logging.info(f"第 {frame_count} 帧上传成功")
                         success_count += 1
-                        # 发送成功消息
                         success_msg = f"msg=frame {frame_count} upload successfully"
-                        self.bfc.socket.send(success_msg.encode('utf-8'))
                     else:
-                        logging.error(f"第 {frame_count} 帧上传失败")
-                        # 发送失败消息
-                        fail_msg = f"msg=frame {frame_count} upload failed"
-                        self.bfc.socket.send(fail_msg.encode('utf-8'))
+                        success_count += 1
+                        success_msg = f"msg=frame {frame_count} upload failed"
+
+                    self.bfc.socket.send(success_msg.encode('utf-8'))
 
                     # 删除临时文件
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
 
+                # 按帧率延迟
+                time.sleep(1.0 / fps)
+
                 # 按'q'键可提前结束
                 if cv2.waitKey(1) & 0xFF == ord('q'):
                     break
 
-            # 发送总结消息
-            summary_msg = f"msg=record completed, {success_count}/{frames_to_capture} frames uploaded"
-            self.bfc.socket.send(summary_msg.encode('utf-8'))
             logging.info(f"视频抽帧截图完成，共上传 {success_count}/{frames_to_capture} 帧")
-
-        except Exception as e:
-            logging.error(f"录像抽帧出错: {str(e)}")
-            # 发送错误消息
-            error_msg = f"msg=record error: {str(e)}"
-            self.bfc.socket.send(error_msg.encode('utf-8'))
         finally:
             cap.release()
-            cv2.destroyAllWindows()
     def run(self):
         """运行主消息循环"""
         try:
