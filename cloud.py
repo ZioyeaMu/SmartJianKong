@@ -294,7 +294,7 @@ import base64
 # aa
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'YOLOv5_Lite_master')))
 from yolov5_master.yolov5.classify import mypredict as yv5d
-from library.BemfaCloud_V20250325 import BemfaCloud
+from library.BemfaCloud_V20250606 import BemfaCloud
 from library.Timer_V20250325 import Timer
 
 # ========================================================================================================================================================================================================================================================
@@ -335,7 +335,7 @@ class System:
         self.run_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())  # 系统运行时间
         self.device_name = self.get_mac()
         # self.device_name = 'mHupH'
-        self.bfc = BemfaCloud(uid=uid, msg_topic=msg_topic, img_topic=img_topic, device_name=self.device_name)
+        self.bfc = BemfaCloud(uid=uid, msg_topic=msg_topic, img_topic=img_topic, device_name=self.device_name, type='cloud')
 
         # 设置日志配置
         if not os.path.exists(self.log_dir):

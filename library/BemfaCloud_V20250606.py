@@ -5,13 +5,14 @@ import time
 import requests
 
 class BemfaCloud:
-    def __init__(self, uid='test', msg_topic='test1', img_topic='test', device_name=''):
+    def __init__(self, uid='test', msg_topic='test1', img_topic='test', device_name='', type='monitor'):
         self.server_ip = 'bemfa.com'
         self.server_port = 8344
         self.uid = uid
         self.msg_topic = msg_topic
         self.img_topic = img_topic
         self.device_name = device_name
+        self.type = type
 
         self.heartbeat_thread = threading.Thread(target=self.send_heartbeat_loop)
 
@@ -132,6 +133,7 @@ class BemfaCloud:
     def send(self, msg):
         data = {
             "user": self.device_name,
+            "type": self.type,
             "time": str(time.time()),
             "msg": msg,
             "target": "admin"

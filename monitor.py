@@ -6,7 +6,7 @@ import uuid
 import base64
 import argparse
 import json
-from library.BemfaCloud_V20250325 import BemfaCloud
+from library.BemfaCloud_V20250606 import BemfaCloud
 
 
 # 配置日志
@@ -48,8 +48,7 @@ class System:
         logging.info("系统已于" + self.run_time + "启动")
 
         # 初始化巴法云连接
-        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic, img_topic=self.img_topic,
-                              device_name=self.device_id)
+        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic, img_topic=self.img_topic, device_name=self.device_id, type='monitor')
         self.power = True
         self.last_heartbeat = time.time()
 
