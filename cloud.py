@@ -344,8 +344,6 @@ class System:
 
         # 系统启动
         logging.info("系统已于" + self.run_time + "启动")
-        if opt.server:
-            logging.warning("系统当前运行状态：云计算服务端")
 
     def off(self):
         self.power = False
@@ -504,9 +502,6 @@ if __name__ == "__main__":
     # 解析命令行参数
     parser = argparse.ArgumentParser()
     # 创建互斥组
-    group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument('-s', '--server', action='store_true', help='是否为云计算服务端', default=True)
-    group.add_argument('-c', '--client', action='store_true', help='是否为监控设备', default=False)
     parser.add_argument("--weights", nargs="+", type=str, default=r"./yolov5_master/yolov5/weights/best.pt", help="model path(s)")
     parser.add_argument("--source", type=str, default=r"..\..\datasets\my_datas\test", help="file/dir/URL/glob/screen/0(webcam)")
     parser.add_argument("--data", type=str, default="./yolov5_master/yolov5/data/coco128.yaml", help="(optional) dataset.yaml path")
