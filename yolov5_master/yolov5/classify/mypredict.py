@@ -2,16 +2,22 @@ import argparse
 import os
 import platform
 import sys
-from pathlib import Path
+# from pathlib import Path
+import pathlib
 
+plt = platform.system()
+if plt != 'Windows':
+  pathlib.WindowsPath = pathlib.PosixPath
+if plt == 'Windows':
+  pathlib.PosixPath = pathlib.WindowsPath
 import torch
 import torch.nn.functional as F
 
-FILE = Path(__file__).resolve()
+FILE = pathlib.Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
     sys.path.append(str(ROOT))  # add ROOT to PATH
-ROOT = Path(os.path.relpath(ROOT, Path.cwd()))  # relative
+ROOT = pathlib.Path(os.path.relpath(ROOT, pathlib.Path.cwd()))  # relative
 
 from ultralytics.utils.plotting import Annotator
 
@@ -59,7 +65,7 @@ def run(
     """Conducts YOLOv5 classification inference on diverse input sources and saves results."""
     source = str(source)
     save_img = not nosave and not source.endswith(".txt")  # save inference images
-    is_file = Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
+    is_file = pathlib.Path(source).suffix[1:] in (IMG_FORMATS + VID_FORMATS)
     is_url = source.lower().startswith(("rtsp://", "rtmp://", "http://", "https://"))
     webcam = source.isnumeric() or source.endswith(".streams") or (is_url and not is_file)
     screenshot = source.lower().startswith("screen")
@@ -67,7 +73,7 @@ def run(
         source = check_file(source)  # download
 
     # Directories
-    save_dir = increment_path(Path(project) / name, exist_ok=exist_ok)  # increment run
+    save_dir = increment_path(pathlib.Path(project) / name, exist_ok=exist_ok)  # increment run
     (save_dir / "labels" if save_txt else save_dir).mkdir(parents=True, exist_ok=True)  # make dir
 
     # Load model
@@ -115,7 +121,7 @@ def run(
             else:
                 p, im0, frame = path, im0s.copy(), getattr(dataset, "frame", 0)
 
-            p = Path(p)  # to Path
+            p = pathlib.Path(p)  # to Path
             save_path = str(save_dir / p.name)  # im.jpg
             txt_path = str(save_dir / "labels" / p.stem) + ("" if dataset.mode == "image" else f"_{frame}")  # im.txt
 
@@ -164,7 +170,7 @@ def run(
                             h = int(vid_cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
                         else:  # stream
                             fps, w, h = 30, im0.shape[1], im0.shape[0]
-                        save_path = str(Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
+                        save_path = str(pathlib.Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
                     vid_writer[i].write(im0)
 
