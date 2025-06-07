@@ -134,7 +134,7 @@ class BemfaCloud:
         data = {
             "user": self.device_name,
             "type": self.type,
-            "time": str(time.time()),
+            "time": str(round(time.time())),
             "msg": msg,
             "target": "admin"
         }
