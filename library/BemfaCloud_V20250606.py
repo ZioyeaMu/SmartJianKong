@@ -130,13 +130,13 @@ class BemfaCloud:
         except Exception as e:
             logging.error(f"上传图片时发生错误：{e}")
 
-    def send(self, msg):
+    def send(self, msg, target="admin"):
         data = {
             "user": self.device_name,
             "type": self.type,
             "time": str(round(time.time())),
             "msg": msg,
-            "target": "admin"
+            "target": target
         }
         try:
             msg = 'cmd=2&uid=' + self.uid + '&topic=' + self.msg_topic + '/set&msg=' + str(data)

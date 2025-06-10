@@ -48,13 +48,16 @@ class System:
         logging.info("系统已于" + self.run_time + "启动")
 
         # 初始化巴法云连接
-        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic, img_topic=self.img_topic, device_name=self.device_id, type='monitor')
+        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic, img_topic=self.img_topic,
+                              device_name=self.device_id, type='monitor')
         self.power = True
         self.last_heartbeat = time.time()
+        self.is_recording = False  # 录像状态标志
 
         # 连接服务器
         self._connect()
         logging.info("初始化完成，设备ID: %s", self.device_id)
+
     def _connect(self):
         """连接服务器"""
         self.bfc.connect()
@@ -92,21 +95,56 @@ class System:
                     pass  # 如果不是JSON，保持原样
 
             if msg_dict.get('target', '') == 'all' or msg_dict.get('target', '') == self.device_id:
-                # 现在可以直接从msg_dict获取命令
                 command = msg_dict.get('msg', '').lower()
+                logging.debug(f"收到命令: {command}")
 
                 if command == 'capture':
                     logging.info("执行拍照命令")
                     self.capture_photo()
-                    self.bfc.send('successfully')
+                    self.bfc.send('successfully',target="cloud")
                     try:
                         logging.info("已发送成功消息到巴法云")
                     except Exception as e:
                         logging.error(f"发送成功消息失败: {str(e)}")
 
+
                 elif command == 'record':
+
                     logging.info("执行录像命令")
-                    self.record_video()  # 固定3秒录像时长
+
+                    if not self.is_recording:
+
+                        logging.info("启动录像线程")
+
+                        self.is_recording = True
+
+                        # 启动录像线程
+
+                        import threading
+
+                        threading.Thread(target=self.record_video).start()
+
+                    else:
+
+                        logging.info("录像已在进行中，忽略重复命令")
+
+
+                elif command == 'stop':
+
+                    logging.info("收到停止录像命令")
+
+                    if self.is_recording:
+
+                        logging.info("设置录像状态为停止")
+
+                        self.is_recording = False
+
+                        self.bfc.send("msg=recording stopped".encode('utf-8'))
+
+                    else:
+
+                        logging.info("录像未进行，忽略停止命令")
+
 
                 elif command == 'shutdown':
                     logging.info("执行关机命令")
@@ -142,82 +180,74 @@ class System:
                     logging.info("照片上传成功")
                     # 发送成功消息
                     success_msg = "msg=capture successfully"
-                    self.bfc.socket.send(success_msg.encode('utf-8'))
+                    self.bfc.send(success_msg.encode('utf-8'),target="cloud")
                 else:
                     logging.error("照片上传失败")
                     # 发送失败消息
                     fail_msg = "msg=capture failed"
-                    self.bfc.socket.send(fail_msg.encode('utf-8'))
+                    self.bfc.send(fail_msg.encode('utf-8'),target="cloud")
 
                 os.remove(temp_path)
             else:
                 logging.error("无法捕获照片")
                 # 发送失败消息
                 fail_msg = "msg=capture failed: no frame captured"
-                self.bfc.socket.send(fail_msg.encode('utf-8'))
+                self.bfc.send(fail_msg.encode('utf-8'),target="cloud")
         except Exception as e:
             logging.error(f"拍照出错: {str(e)}")
             # 发送错误消息
             error_msg = f"msg=capture error: {str(e)}"
-            self.bfc.socket.send(error_msg.encode('utf-8'))
+            self.bfc.send(error_msg.encode('utf-8'),target="cloud")
         finally:
             cap.release()
 
-    def record_video(self, duration=3, fps=20.0, resolution=(1280, 720)):
-        """录制视频并抽帧截图上传"""
+    def record_video(self, resolution=(1280, 720)):
+        """每2秒截图上传，只能通过stop命令停止"""
         cap = cv2.VideoCapture(0)
         try:
             if not cap.isOpened():
                 raise Exception("无法打开摄像头")
 
-            # 设置分辨率
             cap.set(3, resolution[0])
             cap.set(4, resolution[1])
 
-            logging.info(f"开始录制 {duration} 秒视频并抽帧截图...")
-            start_time = time.time()
-            total_frames = int(duration * fps)
-            frames_to_capture = 5
-            capture_interval = max(1, total_frames // frames_to_capture)
-            success_count = 0
+            last_capture_time = time.time()
+            frame_count = 0
 
-            for frame_count in range(1, total_frames + 1):
+            while self.is_recording:
                 ret, frame = cap.read()
                 if not ret:
                     break
 
-                # 均匀地截取5帧
-                if frame_count % capture_interval == 0:
-                    temp_path = f"./temp_frame_{frame_count}_{time.strftime('%Y%m%d%H%M%S')}.jpg"
+                current_time = time.time()
+                if current_time - last_capture_time >= 2.0:
+                    frame_count += 1
+                    timestamp = time.strftime('%Y%m%d%H%M%S')
+                    temp_path = f"./temp_frame_{timestamp}_{frame_count}.jpg"
                     cv2.imwrite(temp_path, frame)
-                    logging.info(f"截取第 {frame_count} 帧并保存到 {temp_path}")
 
-                    # 检查upload_image实现是否一致
                     upload_result = self.bfc.upload_image(temp_path)
                     if upload_result:
-                        logging.info(f"第 {frame_count} 帧上传成功")
-                        success_count += 1
                         success_msg = f"msg=frame {frame_count} upload successfully"
                     else:
-                        success_count += 1
                         success_msg = f"msg=frame {frame_count} upload failed"
 
-                    self.bfc.socket.send(success_msg.encode('utf-8'))
+                    self.bfc.send(success_msg.encode('utf-8'),target="cloud")
 
-                    # 删除临时文件
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
 
-                # 按帧率延迟
-                time.sleep(1.0 / fps)
+                    last_capture_time = current_time
 
-                # 按'q'键可提前结束
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+                time.sleep(0.1)
+                cv2.waitKey(1)
 
-            logging.info(f"视频抽帧截图完成，共上传 {success_count}/{frames_to_capture} 帧")
+        except Exception as e:
+            pass
         finally:
             cap.release()
+            self.is_recording = False
+
     def run(self):
         """运行主消息循环"""
         try:
