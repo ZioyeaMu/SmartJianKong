@@ -6,6 +6,7 @@ import uuid
 import base64
 import argparse
 import json
+import threading
 from library.BemfaCloud_V20250606 import BemfaCloud
 
 
@@ -101,50 +102,35 @@ class System:
                 if command == 'capture':
                     logging.info("执行拍照命令")
                     self.capture_photo()
-                    self.bfc.send('successfully',target="cloud")
+                    self.bfc.send('successfully', target="cloud")
                     try:
                         logging.info("已发送成功消息到巴法云")
                     except Exception as e:
                         logging.error(f"发送成功消息失败: {str(e)}")
 
-
                 elif command == 'record':
-
                     logging.info("执行录像命令")
-
                     if not self.is_recording:
-
                         logging.info("启动录像线程")
-
                         self.is_recording = True
-
-                        # 启动录像线程
-
-                        import threading
-
-                        threading.Thread(target=self.record_video).start()
-
+                        self.bfc.send("record0", target="cloud")
                     else:
-
                         logging.info("录像已在进行中，忽略重复命令")
 
-
+                elif command == 'record1' and self.is_recording and self.is_recording == True:
+                    self.is_recording = msg_dict['user']
+                    self.bfc.send("record2", target=self.is_recording)
+                elif command == 'record3' and self.is_recording and msg_dict['user'] == self.is_recording:
+                    # 启动录像线程
+                    threading.Thread(target=self.record_video).start()
                 elif command == 'stop':
-
                     logging.info("收到停止录像命令")
-
                     if self.is_recording:
-
                         logging.info("设置录像状态为停止")
-
                         self.is_recording = False
-
                         self.bfc.send("msg=recording stopped".encode('utf-8'))
-
                     else:
-
                         logging.info("录像未进行，忽略停止命令")
-
 
                 elif command == 'shutdown':
                     logging.info("执行关机命令")
@@ -180,24 +166,25 @@ class System:
                     logging.info("照片上传成功")
                     # 发送成功消息
                     success_msg = "msg=capture successfully"
-                    self.bfc.send(success_msg.encode('utf-8'),target="cloud")
+                    # todo:这里应该改为向目标设备发送图片网址
+                    self.bfc.send(success_msg.encode('utf-8'), target=self.is_recording)
                 else:
                     logging.error("照片上传失败")
                     # 发送失败消息
                     fail_msg = "msg=capture failed"
-                    self.bfc.send(fail_msg.encode('utf-8'),target="cloud")
+                    self.bfc.send(fail_msg.encode('utf-8'), target=self.is_recording)
 
                 os.remove(temp_path)
             else:
                 logging.error("无法捕获照片")
                 # 发送失败消息
                 fail_msg = "msg=capture failed: no frame captured"
-                self.bfc.send(fail_msg.encode('utf-8'),target="cloud")
+                self.bfc.send(fail_msg.encode('utf-8'), target="cloud")
         except Exception as e:
             logging.error(f"拍照出错: {str(e)}")
             # 发送错误消息
             error_msg = f"msg=capture error: {str(e)}"
-            self.bfc.send(error_msg.encode('utf-8'),target="cloud")
+            self.bfc.send(error_msg.encode('utf-8'), target="cloud")
         finally:
             cap.release()
 
@@ -232,7 +219,7 @@ class System:
                     else:
                         success_msg = f"msg=frame {frame_count} upload failed"
 
-                    self.bfc.send(success_msg.encode('utf-8'),target="cloud")
+                    self.bfc.send(success_msg.encode('utf-8'), target="cloud")
 
                     if os.path.exists(temp_path):
                         os.remove(temp_path)

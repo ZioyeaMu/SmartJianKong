@@ -426,8 +426,8 @@ class System:
                                 s = s.rstrip(", ")
                                 s += '。'
                                 logging.info(f'[图像识别] 检测完成，类别：{s}')
-                                print(f'/share {type(dict(zip(names, names_prob)))} detect_result {dict(zip(names, names_prob))}')
-                                self.bfc.send(dict(zip(names, names_prob)))
+                                print(f'/share {type(dict(zip(names, names_prob)))} detect_result {dict({names[0]:names_prob[0]})}')
+                                self.bfc.send(dict({names[0]:names_prob[0]}))
                             except Exception as e:
                                 logging.error(f"[图像识别] 发生了错误，原因：{e}")
                         else:
