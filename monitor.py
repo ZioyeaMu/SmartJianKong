@@ -9,11 +9,7 @@ import json
 import threading
 from library.BemfaCloud_V20250606 import BemfaCloud
 
-# 在程序开头添加（确保日志级别为INFO）
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(levelname)s - %(message)s'
-)
+
 # 配置日志
 def setup_logging(log_file="logfile.log"):
     logging.basicConfig(
@@ -93,16 +89,14 @@ class System:
             # 先检查msg字段是否是JSON字符串
             if 'msg' in msg_dict and isinstance(msg_dict['msg'], str):
                 try:
-                    inner_msg = json.loads(msg_dict['msg'])  # 解析JSON字符串
+                    inner_msg = json.loads(msg_dict['msg'].replace("'", '"'))  # 解析JSON字符串
                     if isinstance(inner_msg, dict):
                         msg_dict.update(inner_msg)  # 合并到主字典
-                except json.JSONDecodeError:
+                except json.JSONDecodeError as e:
                     pass  # 如果不是JSON，保持原样
-
             if msg_dict.get('target', '') == 'all' or msg_dict.get('target', '') == self.device_id:
                 command = msg_dict.get('msg', '').lower()
                 logging.debug(f"收到命令: {command}")
-
                 if command == 'capture':
                     logging.info("执行拍照命令")
                     self.capture_photo()
@@ -115,7 +109,7 @@ class System:
                 elif command == 'record':
                     logging.info("执行录像命令")
                     if not self.is_recording:
-                        logging.info("启动录像线程")
+                        logging.info("开始握手")
                         self.is_recording = True
                         self.bfc.send("record0", target="cloud")
                     else:
@@ -125,8 +119,10 @@ class System:
                     self.is_recording = msg_dict['user']
                     self.bfc.send("record2", target=self.is_recording)
                 elif command == 'record3' and self.is_recording and msg_dict['user'] == self.is_recording:
+                    logging.info("启动录像线程")
+                    print("recode mode")
                     # 启动录像线程
-                    threading.Thread(target=self.record_video).start()
+                    # threading.Thread(target=self.record_video).start()
                 elif command == 'stop':
                     logging.info("收到停止录像命令")
                     if self.is_recording:
@@ -170,15 +166,10 @@ class System:
                 image_url = self.bfc.upload_image(temp_path)
                 if image_url:
                     # 提取时间戳（最后10位数字）
-
-
                     self.bfc.send(f"img|{image_url}", target=self.is_recording)
                     logging.info(f"已发送时间戳: {image_url}")
-
                 else:
                     logging.error("照片上传失败")
-
-
                     # 发送失败消息
                     fail_msg = "msg=capture failed"
                     self.bfc.send(fail_msg.encode('utf-8'), target=self.is_recording)
@@ -224,13 +215,10 @@ class System:
                     image_url = self.bfc.upload_image(temp_path)
                     if image_url:
                         # 提取时间戳（最后10位数字）
-
                         self.bfc.send(f"img|{image_url}", target=self.is_recording)
                         logging.info(f"已发送时间戳: {image_url}")
-
                     else:
                         logging.error("照片上传失败")
-
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
 

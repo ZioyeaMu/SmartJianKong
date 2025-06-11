@@ -326,6 +326,7 @@ def log_example():
 
 class System:
     def __init__(self, opt, uid='test', msg_topic='test1', img_topic='test'):
+        self.detcon = None
         self.opt = opt
         self.uid = uid
         self.msg_topic = msg_topic
@@ -333,8 +334,8 @@ class System:
         self.power = True
         self.log_dir = './logs/'  # 日志路径
         self.run_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())  # 系统运行时间
-        self.device_name = self.get_mac()
-        # self.device_name = 'mHupH'
+        # self.device_name = self.get_mac()
+        self.device_name = 'mHupH'
         self.bfc = BemfaCloud(uid=uid, msg_topic=msg_topic, img_topic=img_topic, device_name=self.device_name, type='cloud')
 
         # 设置日志配置
@@ -376,7 +377,7 @@ class System:
         return six_char_string
 
     def msg_handle(self, msg_dict):
-        if msg_dict['target'] == self.device_name or msg_dict['target'] == 'all':
+        if msg_dict['target'] == self.device_name or msg_dict['target'] == 'all' or msg_dict['target'] == 'cloud':
             if msg_dict['msg'] == 'shutdown':
                 self.power = False
             elif msg_dict["msg"] == 'who':
@@ -436,6 +437,13 @@ class System:
                         logging.error(f"获取图片失败: {result['msg']}")
                 else:
                     logging.error(f"请求失败, 状态码: {response.status_code}")
+            elif msg_dict['msg'] == 'record0' and self.detcon is None:
+                self.bfc.send("record1", target=msg_dict['user'])
+            elif msg_dict['msg'] == 'record2' and self.detcon is None:
+                self.detcon = msg_dict['user']
+                self.bfc.send("record3", target=self.detcon)
+                # todo:进入持续识别模式
+                print("detect mode")
 
 
 # ========================================================================================================================================================================================================================================================
