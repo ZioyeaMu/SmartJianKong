@@ -117,18 +117,30 @@ class BemfaCloud:
             }
             response = requests.post(url, data=data, files=files)
             files['image'].close()
+
             # 处理响应
             if response.status_code == 200:
                 # 解析JSON响应
                 result = response.json()
                 if result['code'] == 0:
-                    logging.info(f"上传图片成功！图片路径：\"{image_path}\"")
+                    image_url = result.get('data', {}).get('url')
+                    timestamp = image_url.split('-')[-1].replace('.jpg', '')
+                    if image_url:
+                        logging.info(f"上传图片成功！图片路径：\"{image_path}\"，URL: {image_url}")
+
+                        return timestamp
+                    else:
+                        logging.error("上传成功但未获取到图片URL")
+                        return None
                 else:
                     logging.error(f"上传图片失败: {result['msg']}")
+                    return None
             else:
                 logging.error(f"请求失败, 状态码: {response.status_code}")
+                return None
         except Exception as e:
             logging.error(f"上传图片时发生错误：{e}")
+            return None
 
     def send(self, msg, target="admin"):
         data = {

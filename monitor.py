@@ -9,7 +9,11 @@ import json
 import threading
 from library.BemfaCloud_V20250606 import BemfaCloud
 
-
+# 在程序开头添加（确保日志级别为INFO）
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(levelname)s - %(message)s'
+)
 # 配置日志
 def setup_logging(log_file="logfile.log"):
     logging.basicConfig(
@@ -162,14 +166,19 @@ class System:
                 cv2.imwrite(temp_path, frame)
                 logging.info(f"照片已保存到 {temp_path}")
 
-                if self.bfc.upload_image(temp_path):
-                    logging.info("照片上传成功")
-                    # 发送成功消息
-                    success_msg = "msg=capture successfully"
-                    # todo:这里应该改为向目标设备发送图片网址
-                    self.bfc.send(success_msg.encode('utf-8'), target=self.is_recording)
+                # 只调用一次 upload_image() 并保存结果
+                image_url = self.bfc.upload_image(temp_path)
+                if image_url:
+                    # 提取时间戳（最后10位数字）
+
+
+                    self.bfc.send(f"img|{image_url}", target=self.is_recording)
+                    logging.info(f"已发送时间戳: {image_url}")
+
                 else:
                     logging.error("照片上传失败")
+
+
                     # 发送失败消息
                     fail_msg = "msg=capture failed"
                     self.bfc.send(fail_msg.encode('utf-8'), target=self.is_recording)
@@ -212,14 +221,15 @@ class System:
                     timestamp = time.strftime('%Y%m%d%H%M%S')
                     temp_path = f"./temp_frame_{timestamp}_{frame_count}.jpg"
                     cv2.imwrite(temp_path, frame)
+                    image_url = self.bfc.upload_image(temp_path)
+                    if image_url:
+                        # 提取时间戳（最后10位数字）
 
-                    upload_result = self.bfc.upload_image(temp_path)
-                    if upload_result:
-                        success_msg = f"msg=frame {frame_count} upload successfully"
+                        self.bfc.send(f"img|{image_url}", target=self.is_recording)
+                        logging.info(f"已发送时间戳: {image_url}")
+
                     else:
-                        success_msg = f"msg=frame {frame_count} upload failed"
-
-                    self.bfc.send(success_msg.encode('utf-8'), target="cloud")
+                        logging.error("照片上传失败")
 
                     if os.path.exists(temp_path):
                         os.remove(temp_path)
