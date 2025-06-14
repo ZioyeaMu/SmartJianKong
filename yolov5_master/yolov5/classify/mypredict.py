@@ -61,6 +61,7 @@ def run(
     vid_stride=1,  # video frame-rate stride
     pipe=None,
 ):
+    print(locals())
     names_pred = []
     prob_pred = []
     """Conducts YOLOv5 classification inference on diverse input sources and saves results."""
@@ -86,7 +87,7 @@ def run(
     # Dataloader
     bs = 1  # batch_size
     if webcam:
-        view_img = check_imshow(warn=True)
+        # view_img = check_imshow(warn=True)
         dataset = LoadStreams(source, img_size=imgsz, transforms=classify_transforms(imgsz[0]), vid_stride=vid_stride)
         bs = len(dataset)
     elif screenshot:

@@ -616,6 +616,7 @@ if __name__ == "__main__":
     parser.add_argument("--vid-stride", type=int, default=1, help="video frame-rate stride")
     opts = parser.parse_args()
     opts.imgsz *= 2 if len(opts.imgsz) == 1 else 1  # expand
+    opts.view_img = False
 
     try:
         main(opts)
