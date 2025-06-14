@@ -59,6 +59,7 @@ def run(
     half=False,  # use FP16 half-precision inference
     dnn=False,  # use OpenCV DNN for ONNX inference
     vid_stride=1,  # video frame-rate stride
+    pipe=None,
 ):
     names_pred = []
     prob_pred = []
@@ -111,7 +112,8 @@ def run(
         # Post-process
         with dt[2]:
             pred = F.softmax(results, dim=1)  # probabilities
-
+        names_pred.clear()
+        prob_pred.clear()
         # Process predictions
         for i, prob in enumerate(pred):  # per image
             seen += 1
@@ -134,8 +136,6 @@ def run(
             for j in top5i:
                 names_pred.append(names[j])
                 prob_pred.append(round(prob[j].item(), 2))
-            print(names_pred)
-            print(prob_pred)
 
             # Write results
             text = "\n".join(f"{prob[j]:.2f} {names[j]}" for j in top5i)
@@ -173,9 +173,17 @@ def run(
                         save_path = str(pathlib.Path(save_path).with_suffix(".mp4"))  # force *.mp4 suffix on results videos
                         vid_writer[i] = cv2.VideoWriter(save_path, cv2.VideoWriter_fourcc(*"mp4v"), fps, (w, h))
                     vid_writer[i].write(im0)
+        if pipe:
+            pipe.send((prob_pred, names_pred))
+        #     # lock.acquire()
+        #     prob_list = prob_pred
+        #     names_pred = names_pred
+            # lock.release()
+        # print(names_pred)
+        # print(prob_pred)
 
         # Print time (inference-only)
-        LOGGER.info(f"{s}{dt[1].dt * 1E3:.1f}ms")
+        # LOGGER.info(f"{s}{dt[1].dt * 1E3:.1f}ms")
 
     # Print results
     t = tuple(x.t / seen * 1e3 for x in dt)  # speeds per image

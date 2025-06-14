@@ -2,7 +2,11 @@ import threading
 import logging
 import socket
 import time
+
+import cv2
+import numpy as np
 import requests
+import hashlib
 
 class BemfaCloud:
     def __init__(self, uid='test', msg_topic='test1', img_topic='test', device_name='', type='monitor'):
@@ -104,42 +108,48 @@ class BemfaCloud:
             logging.error(f"[巴法云] 发送心跳失败：{e}，重连服务器中...")
             self.reconnect()
 
-    def upload_image(self, image_path):
+    def upload_image(self, image):
         """上传图片到服务器"""
         try:
-            url = "https://apis.bemfa.com/vb/api/v1/imagesUpload"
-            files = {'image': open(image_path, 'rb')}
-            data = {
-                'openID': self.uid,
-                'topic': self.img_topic,
-                'wechat': '',
-                'pash': '',
-            }
-            response = requests.post(url, data=data, files=files)
-            files['image'].close()
+            url = "https://images.bemfa.com/upload/v1/upimages.php"
+            # 判断传入参数类型
+            if isinstance(image, str):  # 图片路径
+                image_data = open(image, 'rb').read()
+            elif hasattr(image, 'read'):  # 图片文件对象
+                image.seek(0)
+                image_data = image.read()
+            else:  # 图片数据（假设为二进制数据）
+                image_data = image
 
+            # 计算主题的 md5 值
+            topic_md5 = hashlib.md5((self.uid + self.img_topic).encode('utf-8')).hexdigest()
+
+            # 构建请求头
+            headers = {
+                "Content-Type": "image/jpeg",
+                "Authorization": self.uid,
+                "Authtopic": self.img_topic,
+                "picpath": self.device_name
+            }
+
+            # 发送POST请求
+            response = requests.post(url, headers=headers, data=image_data)
             # 处理响应
             if response.status_code == 200:
                 # 解析JSON响应
                 result = response.json()
-                if result['code'] == 0:
-                    image_url = result.get('data', {}).get('url')
-                    timestamp = image_url.split('-')[-1].replace('.jpg', '')
-                    if image_url:
-                        logging.info(f"上传图片成功！图片路径：\"{image_path}\"，URL: {image_url}")
-
-                        return timestamp
-                    else:
-                        logging.error("上传成功但未获取到图片URL")
-                        return None
+                image_url = result.get('url')
+                if image_url:
+                    logging.debug(f"[巴法云] 上传图片成功！图片URL: {image_url}")
+                    return image_url
                 else:
-                    logging.error(f"上传图片失败: {result['msg']}")
+                    logging.error("[巴法云] 上传成功但未获取到图片URL")
                     return None
             else:
-                logging.error(f"请求失败, 状态码: {response.status_code}")
+                logging.error(f"[巴法云] 请求失败, 状态码: {response.status_code}")
                 return None
         except Exception as e:
-            logging.error(f"上传图片时发生错误：{e}")
+            logging.error(f"[巴法云] 上传图片时发生错误：{e}")
             return None
 
     def send(self, msg, target="admin"):
