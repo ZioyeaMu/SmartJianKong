@@ -36,7 +36,6 @@ from pathlib import Path
 
 import torch
 import torch.nn.functional as F
-
 FILE = Path(__file__).resolve()
 ROOT = FILE.parents[1]  # YOLOv5 root directory
 if str(ROOT) not in sys.path:
@@ -62,7 +61,6 @@ from utils.general import (
     strip_optimizer,
 )
 from utils.torch_utils import select_device, smart_inference_mode
-
 
 @smart_inference_mode()
 def run(
@@ -207,9 +205,9 @@ def run(
 def parse_opt():
     """Parses command line arguments for YOLOv5 inference settings including model, source, device, and image size."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--weights", nargs="+", type=str, default=r"..\weights\best.pt", help="model path(s)")
-    parser.add_argument("--source", type=str, default=r"..\..\datasets\my_datas\test", help="file/dir/URL/glob/screen/0(webcam)")
-    parser.add_argument("--data", type=str, default=ROOT / "data/coco128.yaml", help="(optional) dataset.yaml path")
+    parser.add_argument("--weights", nargs="+", type=str, default=r"../runs/train-cls/traffic_exp1153/weights/best.pt", help="model path(s)")
+    parser.add_argument("--source", type=str, default=r"../data/pre", help="file/dir/URL/glob/screen/0(webcam)")
+    parser.add_argument("--data", type=str, default=ROOT / "traffic.yaml", help="(optional) dataset.yaml path")
     parser.add_argument("--imgsz", "--img", "--img-size", nargs="+", type=int, default=[224], help="inference size h,w")
     parser.add_argument("--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
     parser.add_argument("--view-img", action="store_true", help="show results")

@@ -150,9 +150,8 @@ def run(
 def parse_opt():
     """Parses and returns command line arguments for YOLOv5 model evaluation and inference settings."""
     parser = argparse.ArgumentParser()
-    parser.add_argument("--data", type=str, default=r"D:\yolov5-master\yolov5\data\my_datas", help="dataset path")
-    parser.add_argument("--weights", nargs="+", type=str, default=r"D:\yolov5-master\yolov5\runs\train-cls\traffic_exp123"
-                                                                  r"\weights\best.pt",help="model.pt path(s)")
+    parser.add_argument("--data", type=str, default=r"../../datasets/my_datas", help="dataset path")
+    parser.add_argument("--weights", nargs="+", type=str, default=r"../runs/train-cls/traffic_exp1153/weights/best.pt",help="model.pt path(s)")
     parser.add_argument("--batch-size", type=int, default=128, help="batch size")
     parser.add_argument("--imgsz", "--img", "--img-size", type=int, default=224, help="inference size (pixels)")
     parser.add_argument("--device", default="0", help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
