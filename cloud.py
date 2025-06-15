@@ -31,7 +31,7 @@ from library.Timer_V20250325 import Timer
 def setup_logging(log_file="logfile.log"):
     logging.basicConfig(
         filename=log_file,  # 日志文件
-        level=logging.DEBUG,  # 最低日志级别
+        level=logging.INFO,  # 最低日志级别
         format="%(asctime)s - %(levelname)s - %(message)s",  # 日志格式
         datefmt="%Y-%m-%d %H:%M:%S",  # 时间格式
         encoding='utf-8',  # 指定UTF-8编码
@@ -315,7 +315,7 @@ class System:
                             s += f"{self.detect_prob[i]} {self.detect_names[i]}, "
                         s = s.rstrip(", ")
                         s += '。'
-                        logging.info(f'[app.OnlineDetect] 检测完成，类别：{s}')
+                        logging.debug(f'[app.OnlineDetect] 检测完成，类别：{s}')
                         print(
                             f'/share {type(dict(zip(self.detect_names, self.detect_prob)))} detect_result {dict({self.detect_names[0]: self.detect_prob[0]})}')
                         self.parent.bfc.send(dict({self.detect_names[0]: self.detect_prob[0]}))
@@ -335,8 +335,8 @@ class System:
                 self.__reset()
 
     def __init__(self, opt, uid='test', msg_topic='test1', img_topic='test'):
-        # self.device_name = self.get_mac()
-        self.device_name = 'mHupH'
+        self.device_name = self.get_mac()
+        # self.device_name = 'mHupH'
         self.detcon = None
         self.opt = opt
         self.uid = uid
@@ -459,72 +459,7 @@ class System:
                 else:
                     logging.error(f"请求失败, 状态码: {response.status_code}")
             elif msg_dict['msg'] == 'record.record0' and self.detcon is None:
-                # self.app_VideoStreamServer.run()
                 self.app_OnlineDetect.run()
-            # elif msg_dict['msg'] == 'record2' and self.detcon is None:
-            #     self.detcon = msg_dict['user']
-            #     self.bfc.send("record3", target=self.detcon)
-            #     self.online_detect()
-
-    # def online_detect(self):
-    #     # 计算主题的 md5 值
-    #     topic_md5 = hashlib.md5((self.uid + self.img_topic).encode('utf-8')).hexdigest()
-    #     url = f"https://img2.bemfa.com/{topic_md5}-{self.detcon}.jpg"
-    #     self.app_VideoStreamServer.run(url)
-    #
-    #     self.detect_prob = []
-    #     self.detect_names = []
-    #     self.result_queue = queue.Queue()  # 创建队列
-    #     self.opt.source = "http://localhost:5000/video_feed"
-    #     yolov5_params = {
-    #         "weights": self.opt.weights,
-    #         "source": self.opt.source,
-    #         "imgsz": self.opt.imgsz,
-    #         "device": self.opt.device,
-    #         "view_img": self.opt.view_img,
-    #         "save_txt": self.opt.save_txt,
-    #         "nosave": self.opt.nosave,
-    #         "augment": self.opt.augment,
-    #         "visualize": self.opt.visualize,
-    #         "update": self.opt.update,
-    #         "project": self.opt.project,
-    #         "name": self.opt.name,
-    #         "exist_ok": self.opt.exist_ok,
-    #         "half": self.opt.half,
-    #         "dnn": self.opt.dnn,
-    #         "vid_stride": self.opt.vid_stride,
-    #         "queue": self.result_queue,
-    #
-    #     }
-    #     try:
-    #         self.detect_thread = threading.Thread(target=yv5d.run, kwargs=yolov5_params)
-    #         self.detect_thread.start()
-    #         print("1")
-    #         while True:
-    #             print("2")
-    #             names_prob = []
-    #             names = []
-    #             while not self.result_queue.empty():
-    #                 names_prob, names = self.result_queue.get()
-    #             names_prob = names_prob.copy()
-    #             names = names.copy()
-    #             if len(names_prob) != 0 and len(names) != 0 and len(names) == len(names_prob):
-    #                 print("检测结果：")
-    #                 print("置信度：", names_prob)
-    #                 print("类别：", names)
-    #                 s = ''
-    #                 for i in range(0, len(names)):
-    #                     s += f"{names_prob[i]} {names[i]}, "
-    #                 s = s.rstrip(", ")
-    #                 s += '。'
-    #                 logging.info(f'[图像识别] 检测完成，类别：{s}')
-    #                 print(
-    #                     f'/share {type(dict(zip(names, names_prob)))} detect_result {dict({names[0]: names_prob[0]})}')
-    #                 self.bfc.send(dict({names[0]: names_prob[0]}))
-    #             time.sleep(0.5)
-    #     except Exception as e:
-    #         print(e)
-    #         logging.error(f"[图像识别] 发生了错误，原因：{e}")
 
 
 # ========================================================================================================================================================================================================================================================
