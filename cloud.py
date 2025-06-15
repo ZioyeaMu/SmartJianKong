@@ -294,7 +294,7 @@ class System:
                         self.msg_version = self.parent.msg_version
 
                     if self.running and self.connect_device is not None:
-                        if (nowtime - self.shake_hands_time) >= (self.timeout - 10) and not self.heart:
+                        if (nowtime - self.shake_hands_time) >= (self.timeout - 10) and not self.heart and self.timeout != 5:
                             self.parent.bfc.send("record.KEEP", target=self.connect_device)
                             self.heart = True
 

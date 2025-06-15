@@ -45,6 +45,7 @@ class System:
             self.connect_device = None
             self.shake_hands_time = None
             self.timeout = 5
+            self.heart = False
 
         def __reset(self):
             self.thread = threading.Thread(target=self.__main)
@@ -131,7 +132,7 @@ class System:
                                 break
                         self.msg_version = self.parent.msg_version
                     if self.is_recording and self.connect_device is not None:
-                        if (nowtime - self.shake_hands_time) >= (self.timeout - 10) and not self.heart:
+                        if (nowtime - self.shake_hands_time) >= (self.timeout - 10) and not self.heart and self.timeout != 5:
                             self.parent.bfc.send("record.KEEP", target=self.connect_device)
                             self.heart = True
             except Exception as e:
