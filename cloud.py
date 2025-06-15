@@ -320,7 +320,7 @@ class System:
                         logging.debug(f'[app.OnlineDetect] 检测完成，类别：{s}')
 
                         print(f'/share {type(dict(zip(self.detect_names, self.detect_prob)))} detect_result {dict({self.detect_names[0]: self.detect_prob[0]})}')
-                        self.parent.bfc.send(dict({self.detect_names[0]: self.detect_prob[0]}), as_=self.connect_device)
+                        self.parent.bfc.send(dict({self.detect_names[0]: self.detect_prob[0]}), as_=self.connect_device, type="monitor")
 
                     while True:
                         try:
