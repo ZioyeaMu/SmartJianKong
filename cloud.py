@@ -26,7 +26,14 @@ from library.Timer_V20250325 import Timer
 
 # ========================================================================================================================================================================================================================================================
 
-
+logging.basicConfig(
+    level=logging.DEBUG,  # 设置为最低级别DEBUG以显示所有日志
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
+    handlers=[
+        logging.FileHandler('app.log'),  # 文件日志
+        logging.StreamHandler()         # 控制台日志
+    ]
+)
 # 配置日志记录
 def setup_logging(log_file="logfile.log"):
     logging.basicConfig(
@@ -320,12 +327,17 @@ class System:
                         s = s.rstrip(", ")
                         s += '。'
                         logging.debug(f'[app.OnlineDetect] 检测完成，类别：{s}')
-                        print(
-                            f'/share {type(dict(zip(self.detect_names, self.detect_prob)))} detect_result {dict({self.detect_names[0]: self.detect_prob[0]})}')
-                        self.parent.bfc.send(dict({self.detect_names[0]: self.detect_prob[0]}))
+
+                        # 构造计算结果消息
+                        result_msg = {
+                            "detect_result": dict(zip(self.detect_names, self.detect_prob))
+                        }
+
+                        # 发送给monitor
+                        self.parent.bfc.send(result_msg, target="monitor")
+
                     while True:
                         try:
-                            # 尝试接收管道中的数据，设置超时时间
                             if pipe.poll(timeout=0.01):
                                 msg = pipe.recv()
                             else:

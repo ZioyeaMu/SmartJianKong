@@ -152,9 +152,17 @@ class BemfaCloud:
             logging.error(f"[巴法云] 上传图片时发生错误：{e}")
             return None
 
-    def send(self, msg, target="admin"):
+    def send(self, msg, target="admin", as_=None):
+        """
+        发送消息到巴法云
+
+        Args:
+            msg: 要发送的消息内容（可以是字符串或字典）
+            target: 消息接收目标（默认 "admin"）
+            as_: 以谁的身份发送（默认 None，使用 self.device_name）
+        """
         data = {
-            "user": self.device_name,
+            "user": as_ if as_ is not None else self.device_name,  # 如果指定了 as_ 就用它，否则用默认的 device_name
             "type": self.type,
             "time": str(round(time.time())),
             "msg": msg,

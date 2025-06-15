@@ -206,9 +206,20 @@ class System:
                         msg_dict.update(inner_msg)  # 合并到主字典
                 except json.JSONDecodeError as e:
                     pass  # 如果不是JSON，保持原样
+
             if msg_dict.get('target', '') == 'all' or msg_dict.get('target', '') == self.device_id:
                 command = msg_dict.get('msg', '')
                 logging.debug(f"收到命令: {command}")
+
+                # 添加对计算结果的处理
+                if isinstance(command, dict) and 'detect_result' in command:
+                    # 获取计算结果
+                    result = command['detect_result']
+                    # 以monitor身份转发结果
+                    self.bfc.send(result, target="admin", as_="monitor")
+                    logging.info(f"已转发计算结果: {result}")
+                    return
+
                 if command == 'capture':
                     logging.info("执行拍照命令")
                     self.capture_photo()
