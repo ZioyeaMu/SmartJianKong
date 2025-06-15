@@ -130,9 +130,10 @@ class System:
                                 logging.info("[app.record] 停止录像")
                                 break
                         self.msg_version = self.parent.msg_version
-                    # if self.is_recording and self.connect_device is not None:
-                    #     if nowtime - self.shake_hands_time >= 50:
-                    #         self.parent.bfc.send("KEEP", target=self.connect_device)
+                    if self.is_recording and self.connect_device is not None:
+                        if (nowtime - self.shake_hands_time) >= (self.timeout - 10) and not self.heart:
+                            self.parent.bfc.send("record.KEEP", target=self.connect_device)
+                            self.heart = True
             except Exception as e:
                 logging.error(f"[app.record] 主线程出现错误：{e}，APP终止")
             finally:

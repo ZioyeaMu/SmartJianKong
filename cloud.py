@@ -285,6 +285,10 @@ class System:
                             'user'] == self.connect_device:
                             self.shake_hands_time = nowtime
                             self.heart = False
+                        elif self.parent.msg_dict['msg'] == 'record.KEEP' and self.running and self.parent.msg_dict[
+                            'user'] == self.connect_device:
+                            self.parent.bfc.send("record.OK", target=self.connect_device)
+                            self.shake_hands_time = nowtime
                         elif self.parent.msg_dict['msg'] == 'record.stop' and self.running and (self.parent.msg_dict[
                             'user'] == self.connect_device or self.parent.msg_dict['user'] == "admin"):
                             break
