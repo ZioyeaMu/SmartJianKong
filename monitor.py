@@ -113,7 +113,7 @@ class System:
                         logging.info(f"[app.record] 握手超时，APP退出")
                         break
                     if self.parent.msg_version != self.msg_version:
-                        if self.parent.msg_dict['target'] == self.parent.device_name or self.parent.msg_dict['target'] == 'all' or self.parent.msg_dict['target'] == 'cloud':
+                        if self.parent.msg_dict['target'] == self.parent.device_id or self.parent.msg_dict['target'] == 'all' or self.parent.msg_dict['target'] == 'cloud':
                             if "msg" in self.parent.msg_dict:
                                 command = self.parent.msg_dict["msg"]
                                 if command == 'record.record1' and self.is_recording and self.connect_device is None:
