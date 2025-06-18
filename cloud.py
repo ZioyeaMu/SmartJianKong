@@ -268,28 +268,29 @@ class System:
                         break
 
                     if self.parent.msg_version != self.msg_version:
-                        if self.parent.msg_dict['msg'] == 'record.record2' and self.connect_device is None:
-                            self.connect_device = self.parent.msg_dict['user']
-                            self.parent.bfc.send("record.record3", target=self.connect_device)
-                            topic_md5 = hashlib.md5(
-                                (self.parent.uid + self.parent.img_topic).encode('utf-8')).hexdigest()
-                            self.parent.app_VideoStreamServer.run(
-                                f"https://img2.bemfa.com/{topic_md5}-{self.connect_device}.jpg")
-                            self.parent.app_YOLOv5.yolov5_params["source"] = "http://localhost:5000/video_feed"
-                            self.timeout = 60
-                            # self.yv5d_thread.start()
-                            self.detect_thread.start()
-                        elif self.parent.msg_dict['msg'] == 'record.OK' and self.running and self.parent.msg_dict[
-                            'user'] == self.connect_device:
-                            self.shake_hands_time = nowtime
-                            self.heart = False
-                        elif self.parent.msg_dict['msg'] == 'record.KEEP' and self.running and self.parent.msg_dict[
-                            'user'] == self.connect_device:
-                            self.parent.bfc.send("record.OK", target=self.connect_device)
-                            self.shake_hands_time = nowtime
-                        elif self.parent.msg_dict['msg'] == 'record.stop' and self.running and (self.parent.msg_dict[
-                            'user'] == self.connect_device or self.parent.msg_dict['user'] == "admin"):
-                            break
+                        if self.parent.msg_dict['target'] == self.parent.device_name or self.parent.msg_dict['target'] == 'all' or self.parent.msg_dict['target'] == 'cloud':
+                            if self.parent.msg_dict['msg'] == 'record.record2' and self.connect_device is None:
+                                self.connect_device = self.parent.msg_dict['user']
+                                self.parent.bfc.send("record.record3", target=self.connect_device)
+                                topic_md5 = hashlib.md5(
+                                    (self.parent.uid + self.parent.img_topic).encode('utf-8')).hexdigest()
+                                self.parent.app_VideoStreamServer.run(
+                                    f"https://img2.bemfa.com/{topic_md5}-{self.connect_device}.jpg")
+                                self.parent.app_YOLOv5.yolov5_params["source"] = "http://localhost:5000/video_feed"
+                                self.timeout = 60
+                                # self.yv5d_thread.start()
+                                self.detect_thread.start()
+                            elif self.parent.msg_dict['msg'] == 'record.OK' and self.running and self.parent.msg_dict[
+                                'user'] == self.connect_device:
+                                self.shake_hands_time = nowtime
+                                self.heart = False
+                            elif self.parent.msg_dict['msg'] == 'record.KEEP' and self.running and self.parent.msg_dict[
+                                'user'] == self.connect_device:
+                                self.parent.bfc.send("record.OK", target=self.connect_device)
+                                self.shake_hands_time = nowtime
+                            elif self.parent.msg_dict['msg'] == 'record.stop' and self.running and (self.parent.msg_dict[
+                                'user'] == self.connect_device or self.parent.msg_dict['user'] == "admin"):
+                                break
 
                         self.msg_version = self.parent.msg_version
 
