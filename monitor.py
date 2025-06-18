@@ -130,6 +130,9 @@ class System:
                             elif command == 'record.stop' and self.is_recording:
                                 logging.info("[app.record] 停止录像")
                                 break
+                            elif self.parent.msg_dict['msg'] == 'record.OK' and self.is_recording and self.parent.msg_dict['user'] == self.connect_device:
+                                self.shake_hands_time = nowtime
+                                self.heart = False
                         self.msg_version = self.parent.msg_version
                     if self.is_recording and self.connect_device is not None:
                         if (nowtime - self.shake_hands_time) >= (self.timeout - 10) and not self.heart and self.timeout != 5:
