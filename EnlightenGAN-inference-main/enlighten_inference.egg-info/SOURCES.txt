@@ -1,0 +1,11 @@
+LICENSE.md
+README.md
+setup.py
+enlighten_inference/__init__.py
+enlighten_inference/enlighten.onnx
+enlighten_inference.egg-info/PKG-INFO
+enlighten_inference.egg-info/SOURCES.txt
+enlighten_inference.egg-info/dependency_links.txt
+enlighten_inference.egg-info/requires.txt
+enlighten_inference.egg-info/top_level.txt
+tests/test_smoke.py

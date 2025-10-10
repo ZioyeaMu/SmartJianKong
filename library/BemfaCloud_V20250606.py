@@ -152,7 +152,7 @@ class BemfaCloud:
             logging.error(f"[巴法云] 上传图片时发生错误：{e}")
             return None
 
-    def send(self, msg, target="admin", as_=None, type=None):
+    def send(self, msg, target="admin", as_=None, type=None, hide=False):
         """
         发送消息到巴法云
 
@@ -161,6 +161,7 @@ class BemfaCloud:
             target: 消息接收目标（默认 "admin"）
             as_: 以谁的身份发送（默认 None，使用 self.device_name）
             type: 标记为什么类型（默认 None，使用 self.type）
+            hide: 是否隐藏日志输出（默认 False）
         """
         data = {
             "user": as_ if as_ is not None else self.device_name,  # 如果指定了 as_ 就用它，否则用默认的 device_name
@@ -172,7 +173,8 @@ class BemfaCloud:
         try:
             msg = 'cmd=2&uid=' + self.uid + '&topic=' + self.msg_topic + '/set&msg=' + str(data)
             self.socket.send(msg.encode("utf-8"))
-            logging.info(f'[巴法云] 已发送消息：{data}')
+            if not hide:
+                logging.debug(f'[巴法云] 已发送消息：{data}')
         except Exception as e:
             logging.error(f"[巴法云] 发送消息失败：{e}，重连服务器中...")
             self.reconnect()

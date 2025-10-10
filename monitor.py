@@ -144,7 +144,8 @@ class System:
                 self.__reset()
 
     def __init__(self):
-        self.device_id = get_device_id()
+        # self.device_id = get_device_id()
+        self.device_id = 'TEST1'
         self.uid = '865c32af7d4c73322601d512f8b45b14'
         self.msg_topic = 'test1'
         self.img_topic = 'test'

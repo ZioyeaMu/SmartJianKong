@@ -1,0 +1,17 @@
+Metadata-Version: 2.1
+Name: enlighten_inference
+Version: 0.0.1
+Summary: Python library for EnlightenGAN inference
+Home-page: https://github.com/arsenyinfo/EnlightenGAN-inference
+Keywords: Machine Learning,Deep Learning,Computer Vision,ONNX
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Requires-Python: >=3.6.0
+Description-Content-Type: text/markdown
+License-File: LICENSE.md
+Requires-Dist: numpy
+Requires-Dist: onnxruntime
+
+Python library for EnlightenGAN inference
