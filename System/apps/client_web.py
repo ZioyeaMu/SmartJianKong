@@ -87,7 +87,7 @@ class ClientWebApp(BaseApp):
                 app=self.app,
                 host=self.host,
                 port=self.port,
-                log_level="info"
+                log_level="warning"
             )
             server = uvicorn.Server(config)
             # 在事件循环中运行协程

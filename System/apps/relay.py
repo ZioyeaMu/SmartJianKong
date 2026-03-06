@@ -227,7 +227,7 @@ class RelayApp(BaseApp):
     
     def _start_forwarding(self, room_id):
         """开始转发房间内两个连接之间的数据"""
-        def forward_data(source_socket, target_socket, source_addr, target_addr):
+        def forward_data(source_socket, target_socket, source_addr, target_addr, room_id_to_close):
             try:
                 # 设置超时时间
                 source_socket.settimeout(60)  # 60秒超时
@@ -279,6 +279,11 @@ class RelayApp(BaseApp):
                     target_socket.close()
                 except:
                     pass
+                # 清理房间
+                with self.room_lock:
+                    if room_id_to_close in self.rooms:
+                        logging.info(f"[{self.name}] 转发结束，清理房间 {room_id_to_close}")
+                        del self.rooms[room_id_to_close]
         
         with self.room_lock:
             room = self.rooms.get(room_id)
@@ -291,11 +296,11 @@ class RelayApp(BaseApp):
             # 创建两个转发线程
             thread1 = threading.Thread(
                 target=forward_data,
-                args=(conn1, conn2, addr1, addr2)
+                args=(conn1, conn2, addr1, addr2, room_id)
             )
             thread2 = threading.Thread(
                 target=forward_data,
-                args=(conn2, conn1, addr2, addr1)
+                args=(conn2, conn1, addr2, addr1, room_id)
             )
             
             thread1.daemon = True
@@ -503,6 +508,10 @@ class RelayApp(BaseApp):
             
             # 清理连接
             if room_id in self.client_connections:
+                try:
+                    self.client_connections[room_id].close()
+                except Exception as close_error:
+                    logging.debug(f"[{self.name}] 关闭socket时出错: {close_error}")
                 del self.client_connections[room_id]
             return False
     
