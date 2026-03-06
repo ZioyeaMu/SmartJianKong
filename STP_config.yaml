@@ -1,0 +1,49 @@
+# 网络配置
+network:
+  primary_server: []
+  secondary_server:
+    - ip: "115.190.87.48"
+      port: 50000
+
+listen_port: 50000  # 监听端口
+
+heartbeat_interval: 20  # 发送心跳间隔(秒)
+heartbeat_timeout: 60  # 心跳超时时间(秒)
+
+root_timeout: 20  # 根端口超时时间(秒)
+
+auto_reconnect_interval: 300  # 自动重连间隔(秒)
+
+auto_send_BPDU_interval: 2  # 自动发送BPDU间隔(秒)
+
+connect_init_timeout: 5  # 连接初始化超时时间(秒)
+
+send_msg_retry_count: 3  # 发送消息重试次数
+
+topology_forward_idle_timeout: 60  # 拓扑中转空闲超时时间
+topology_response_idle_timeout: 10  # 拓扑响应空闲超时时间
+default_idle_timeout: 7200  # 默认空闲超时时间
+
+system_sleep_time_min: 0.01  # 系统最小休眠时间
+system_sleep_time_max: 0.1  # 系统最大休眠时间
+
+connect_retry_count: 3  # 默认连接重试次数
+
+show_warnings: false  # 显示警告信息
+
+default_msg_priority: 2  # 默认消息优先级
+
+stable_connection_count: 6  # 稳定连接计数
+optimize_connection_interval: 300  # 优化连接间隔(秒)
+
+primary_max_retries: 5  # 主服务器最大失败次数
+
+scan_threads: 128  # 扫描线程数
+
+connection_time_window: 60  # 连接时间窗口（秒）
+connection_max_attempts: 5  # 最大连接尝试次数
+connection_cleanup_interval: 300  # 清理连接尝试记录的间隔（秒）
+connection_cleanup_window: 300  # 清理超过时间窗口的连接（秒）
+
+topology_max_entries: 10  # 拓扑数据最大存储数量
+topology_cleanup_interval: 60  # 拓扑数据清理间隔（秒）
