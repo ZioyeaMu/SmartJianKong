@@ -1,327 +1,87 @@
-import logging
-import time
-import os
-import cv2
-import uuid
-import base64
 import argparse
-import json
-import threading
-from library.BemfaCloud_V20250606 import BemfaCloud
+import os
+import sys
+import time
+
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), 'System')))
+from System.system import System, app_initializer
 
 
-# 配置日志
-def setup_logging(log_file="logfile.log"):
-    logging.basicConfig(
-        filename=log_file,  # 日志文件
-        level=logging.INFO,  # 最低日志级别
-        format="%(asctime)s - %(levelname)s - %(message)s",  # 日志格式
-        datefmt="%Y-%m-%d %H:%M:%S",  # 时间格式
-        encoding='utf-8',  # 指定UTF-8编码
-        # stream=sys.stdout
-    )
+# 使用装饰器包装应用注册代码
+@app_initializer
+def register_apps(self):
+    from System.apps.testapp import TestApp
+    from System.apps.STP import STPApp
+    from System.apps.camera import CameraApp
+    from System.apps.monitor_MsgHandle import MsgHandleApp
+
+    # 安装应用2步骤：
+    ta = TestApp(self)  # 1.实例化
+    self.app_list.append(ta)  # 2.添加到清单
+    self.install_app(
+        app=ta,
+        autostartup=False,
+        startup_args=('args1', 'args2'),
+        startup_kwargs={'kwargs1': 'kwargs1', 'kwargs2': 'kwargs2'}
+    )   # 3.安装
+    # 系统启动后会按照设定与否自动启动安装的应用
+    # 应用清单的作用：相当于应用商店，告诉系统有这些软件可用
+
+    ca = CameraApp(self,resolution=(800, 600), fps=15)
+    self.app_list.append(ca)
+    self.install_app(ca, autostartup=True, startup_kwargs={'enable_streaming': True})
+    
+    # 安装监控消息处理应用
+    mha = MsgHandleApp(self)
+    self.app_list.append(mha)
+    self.install_app(mha, autostartup=True)
+
+    sa = STPApp(self)
+    self.app_list.append(sa)
+    self.install_app(sa, autostartup=True)
+
+    # 安装中继应用（客户端模式）
+    from System.apps.relay import RelayApp
+    ra = RelayApp(self, server_mode=False, server_port=12345)
+    self.app_list.append(ra)
+    self.install_app(ra, autostartup=True)
 
 
-# 获取设备唯一标识
-def get_device_id():
-    mac = uuid.getnode()
-    mac_hex = '%012x' % mac
-    mac_bytes = bytes.fromhex(mac_hex)
-    base64_bytes = base64.b64encode(mac_bytes)
-    base64_string = base64_bytes.decode('utf-8')
-    return base64_string[:6].replace('+', 'A').replace('/', 'B')
+def run_argument():
+    # 解析命令行参数
+    parser = argparse.ArgumentParser()
+    # 创建互斥组
+    parser.add_argument("--weights", nargs="+", type=str, default=r"./yolov5_master/yolov5/weights/best.pt",
+                        help="model path(s)")
+    parser.add_argument("--source", type=str, default=r"/none",
+                        help="file/dir/URL/glob/screen/0(webcam)")
+    parser.add_argument("--data", type=str, default="./yolov5_master/yolov5/data/coco128.yaml",
+                        help="(optional) dataset.yaml path")
+    parser.add_argument("--imgsz", "--img", "--img-size", nargs="+", type=int, default=(360, 360), help="inference size h,w")
+    parser.add_argument("--device", default="", help="cuda device, i.e. 0 or 0,1,2,3 or cpu")
+    parser.add_argument("--view-img", action="store_true", help="show results")
+    parser.add_argument("--save-txt", action="store_true", help="save results to *.txt")
+    parser.add_argument("--nosave", default=True, help="do not save images/videos")
+    parser.add_argument("--augment", action="store_true", help="augmented inference")
+    parser.add_argument("--visualize", action="store_true", help="visualize features")
+    parser.add_argument("--update", action="store_true", help="update all models")
+    parser.add_argument("--project", default="./yolov5_master/yolov5/runs/predict-cls",
+                        help="save results to project/name")
+    parser.add_argument("--name", default="exp", help="save results to project/name")
+    parser.add_argument("--exist-ok", action="store_true", help="existing project/name ok, do not increment")
+    parser.add_argument("--half", action="store_true", help="use FP16 half-precision inference")
+    parser.add_argument("--dnn", action="store_true", help="use OpenCV DNN for ONNX inference")
+    parser.add_argument("--vid-stride", type=int, default=1, help="video frame-rate stride")
+    opts = parser.parse_args()
+    opts.imgsz *= 2 if len(opts.imgsz) == 1 else 1  # expand
+    opts.view_img = False
+    return opts
 
+if __name__ == '__main__':
+    # 获取启动参数
+    opts = run_argument()
 
-class System:
-    class App_record:
-        def __init__(self, parent):
-            self.parent = parent
-            self.thread = threading.Thread(target=self.__main)
-            self.thread.daemon = True
-            self.record_thread = threading.Thread(target=self.__record_video)
-            self.record_thread.daemon = True
-            self.msg_version = 0
-            self.is_recording = False
-            self.connect_device = None
-            self.shake_hands_time = None
-            self.timeout = 5
-            self.heart = False
-
-        def __reset(self):
-            self.thread = threading.Thread(target=self.__main)
-            self.thread.daemon = True
-            self.record_thread = threading.Thread(target=self.__record_video)
-            self.record_thread.daemon = True
-            self.msg_version = 0
-            self.is_recording = False
-            self.connect_device = None
-            self.shake_hands_time = None
-            self.timeout = 5
-
-        def run(self):
-            if not self.thread.is_alive() and self.is_recording is False:
-                self.is_recording = True
-                self.parent.bfc.send("record.record0", target="cloud")
-                self.shake_hands_time = time.time()
-                self.thread.start()
-            else:
-                self.parent.bfc.send('程序已在运行。', target=self.parent.msg_dict['user'])
-
-        def __record_video(self, resolution=(1280, 720), fps=10):
-            """每秒截图上传10张照片，只能通过stop命令停止"""
-            cap = cv2.VideoCapture(0)
-            try:
-                if not cap.isOpened():
-                    raise Exception("无法打开摄像头")
-
-                cap.set(3, resolution[0])
-                cap.set(4, resolution[1])
-
-                last_capture_time = time.time()
-                frame_count = 0
-
-                while self.is_recording:
-                    ret, frame = cap.read()
-                    if not ret:
-                        continue
-
-                    current_time = time.time()
-                    if current_time - last_capture_time >= 1 / fps:
-                        frame_count += 1
-
-                        # 将图片编码为JPEG格式并保存到内存中
-                        _, img_encoded = cv2.imencode('.jpg', frame)
-                        image_data = img_encoded.tobytes()
-
-                        # 从内存中读取图片数据并上传
-                        self.parent.bfc.upload_image(image_data)
-
-                        last_capture_time = current_time
-                    time.sleep(0.01)
-
-            except Exception as e:
-                logging.error(f"[app.record] 录像线程出现错误：{e}，APP终止")
-                self.__reset()
-            finally:
-                cap.release()
-
-        def __main(self):
-            try:
-                while self.is_recording:
-                    nowtime = time.time()
-                    if nowtime - self.shake_hands_time >= self.timeout:
-                        logging.info(f"[app.record] 握手超时，APP退出")
-                        break
-                    if self.parent.msg_version != self.msg_version:
-                        if "msg" in self.parent.msg_dict:
-                            command = self.parent.msg_dict["msg"]
-                            if command == 'record.record1' and self.is_recording and self.connect_device is None:
-                                self.connect_device = self.parent.msg_dict['user']
-                                self.parent.bfc.send("record.record2", target=self.connect_device)
-                            elif command == 'record.record3' and self.is_recording and self.parent.msg_dict[
-                                'user'] == self.connect_device:
-                                logging.info(f"[app.record] 与设备{self.connect_device}握手成功，启动录像线程")
-                                self.timeout = 60
-                                self.record_thread.start()
-                            elif command == 'record.KEEP' and self.is_recording and self.parent.msg_dict[
-                                'user'] == self.connect_device:
-                                self.parent.bfc.send("record.OK", target=self.connect_device)
-                                self.shake_hands_time = nowtime
-                            elif command == 'record.stop' and self.is_recording:
-                                logging.info("[app.record] 停止录像")
-                                break
-                            elif self.parent.msg_dict['msg'] == 'record.OK' and self.is_recording and self.parent.msg_dict['user'] == self.connect_device:
-                                self.shake_hands_time = nowtime
-                                self.heart = False
-                        self.msg_version = self.parent.msg_version
-                    if self.is_recording and self.connect_device is not None:
-                        if (nowtime - self.shake_hands_time) >= (self.timeout - 10) and not self.heart and self.timeout != 5:
-                            self.parent.bfc.send("record.KEEP", target=self.connect_device)
-                            self.heart = True
-            except Exception as e:
-                logging.error(f"[app.record] 主线程出现错误：{e}，APP终止")
-            finally:
-                self.__reset()
-
-    def __init__(self):
-        # self.device_id = get_device_id()
-        self.device_id = 'TEST1'
-        self.uid = '865c32af7d4c73322601d512f8b45b14'
-        self.msg_topic = 'test1'
-        self.img_topic = 'test'
-        self.power = True
-        self.log_dir = './logs/'  # 日志路径
-        self.run_time = time.strftime("%Y-%m-%d-%H-%M-%S", time.localtime())  # 系统运行时间
-        # 设置日志配置
-        if not os.path.exists(self.log_dir):
-            os.makedirs(self.log_dir)
-        setup_logging("./logs/" + self.run_time + ".txt")
-
-        logging.info("系统已于" + self.run_time + "启动")
-
-        # 初始化数据存储
-        self.msg_version = 0
-        self.msg_dict = {}
-
-        # 初始化应用
-        self.app_record = self.App_record(self)
-
-        # 初始化巴法云连接
-        self.bfc = BemfaCloud(uid=self.uid, msg_topic=self.msg_topic, img_topic=self.img_topic,
-                              device_name=self.device_id, type='monitor')
-        self.power = True
-        self.last_heartbeat = time.time()
-
-        # 连接服务器
-        self._connect()
-        logging.info("初始化完成，设备ID: %s", self.device_id)
-
-    def _connect(self):
-        """连接服务器"""
-        self.bfc.connect()
-        self.last_heartbeat = time.time()
-
-    def _check_heartbeat(self):
-        """检查心跳是否超时"""
-        if time.time() - self.last_heartbeat > 60:
-            logging.warning("心跳超时，连接已断开")
-            self.bfc.is_connected = False
-            self._reconnect()
-
-    def _reconnect(self):
-        """重连服务器"""
-        logging.info("尝试重新连接...")
-        try:
-            self.bfc.connect()
-            self.last_heartbeat = time.time()
-            logging.info("重新连接成功")
-        except Exception as e:
-            logging.error(f"重新连接失败: {str(e)}")
-            time.sleep(5)
-            self._reconnect()
-
-    def _process_message(self, msg_dict):
-        """处理接收到的消息"""
-        try:
-            # 先检查msg字段是否是JSON字符串
-            if 'msg' in msg_dict and isinstance(msg_dict['msg'], str):
-                try:
-                    inner_msg = json.loads(msg_dict['msg'].replace("'", '"'))  # 解析JSON字符串
-                    if isinstance(inner_msg, dict):
-                        msg_dict.update(inner_msg)  # 合并到主字典
-                except json.JSONDecodeError as e:
-                    pass  # 如果不是JSON，保持原样
-            if msg_dict.get('target', '') == 'all' or msg_dict.get('target', '') == self.device_id:
-                command = msg_dict.get('msg', '')
-                logging.debug(f"收到命令: {command}")
-                if command == 'capture':
-                    logging.info("执行拍照命令")
-                    self.capture_photo()
-                    self.bfc.send('successfully', target="cloud")
-                    try:
-                        logging.info("已发送成功消息到巴法云")
-                    except Exception as e:
-                        logging.error(f"发送成功消息失败: {str(e)}")
-
-                elif command == 'record':
-                    self.app_record.run()
-
-                elif command == 'shutdown':
-                    logging.info("执行关机命令")
-                    self.power = False
-                elif command == 'who':
-                    self.bfc.send('me')
-                else:
-                    logging.warning(f"未知命令: {command} 完整消息: {msg_dict}")
-
-        except Exception as e:
-            logging.error(f"处理消息出错: {str(e)} 原始消息: {msg_dict}")
-
-    def capture_photo(self, filename=None, resolution=(1280, 720)):
-        """拍照并上传"""
-        if filename is None:
-            filename = f"photo_{time.strftime('%Y%m%d%H%M%S')}.jpg"
-
-        cap = cv2.VideoCapture(0)
-        try:
-            if not cap.isOpened():
-                raise Exception("无法打开摄像头")
-
-            cap.set(3, resolution[0])
-            cap.set(4, resolution[1])
-
-            ret, frame = cap.read()
-            if ret:
-                temp_path = f"./temp_{filename}"
-                cv2.imwrite(temp_path, frame)
-                logging.info(f"照片已保存到 {temp_path}")
-
-                # 只调用一次 upload_image() 并保存结果
-                image_url = self.bfc.upload_image(temp_path)
-
-                os.remove(temp_path)
-            else:
-                logging.error("无法捕获照片")
-                # 发送失败消息
-                fail_msg = "msg=capture failed: no frame captured"
-                self.bfc.send(fail_msg.encode('utf-8'), target="cloud")
-        except Exception as e:
-            logging.error(f"拍照出错: {str(e)}")
-            # 发送错误消息
-            error_msg = f"msg=capture error: {str(e)}"
-            self.bfc.send(error_msg.encode('utf-8'), target="cloud")
-        finally:
-            cap.release()
-
-    def run(self):
-        """运行主消息循环"""
-        try:
-            while self.power:
-                self._check_heartbeat()
-
-                try:
-                    recv_data = self.bfc.socket.recv(1024)
-                    if len(recv_data) != 0:
-                        self.bfc.retry = 0
-                        self.bfc.is_connected = True
-                        self.last_heartbeat = time.time()
-
-                        messages = recv_data.decode('utf-8').strip('\r\n').split('\n')
-                        for msg in messages:
-                            try:
-                                msg = msg.strip('\r')
-                                pairs = msg.split('&')
-                                recv_dict = {}
-                                for pair in pairs:
-                                    key, value = pair.split('=')
-                                    recv_dict[key] = value
-
-                                if recv_dict.get('cmd') == '0' and recv_dict.get('res') == '1':
-                                    logging.debug("收到心跳包")
-                                else:
-                                    logging.info(f"收到原始消息: {recv_dict}")
-                                    self.msg_dict = recv_dict
-                                    self.msg_version += 1
-                                    self._process_message(recv_dict)
-                            except Exception as e:
-                                logging.error(f"消息解析错误: {str(e)} 原始消息: {msg}")
-                except BlockingIOError:
-                    pass
-                except ConnectionResetError:
-                    self._reconnect()
-
-                time.sleep(0.1)
-
-        except KeyboardInterrupt:
-            logging.info("用户中断程序")
-        finally:
-            self.power = False
-            logging.info("程序结束")
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description='通过巴法云消息控制摄像头')
-    args = parser.parse_args()
-
+    # 创建系统实例，装饰器会自动执行应用注册
     system = System()
     system.run()
+

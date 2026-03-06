@@ -9,6 +9,7 @@ import time
 from System.utils.helpers import *
 from core.base_app import BaseApp
 import traceback
+import code
 
 # 存储通过装饰器注册的应用初始化函数
 APP_INITIALIZATION_FUNCTIONS = []
@@ -27,7 +28,7 @@ class System:
         try:
             self.config = kwargs
             self.device_name = get_mac()
-            self.power = True
+            self.power = False
             self.run_time = None
 
             # 应用清单和字典
@@ -122,6 +123,8 @@ class System:
                     logging.error(f"[系统] 启动应用 {app.name} 时发生错误: {e}")
                 finally:
                     continue
+            self.power = True
+            code.interact(local={"self": self, "system": self})
             while self.power:
                 time.sleep(0.01)
                 pass
