@@ -9,3 +9,6 @@
 /video/
 /System/logs/
 /EnlightenGAN-inference-main/.idea/
+__pycache__/
+*.pyc
+STP_config.yaml
