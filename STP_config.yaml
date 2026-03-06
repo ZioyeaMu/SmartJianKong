@@ -1,33 +1,6 @@
 # 网络配置
 network:
-  primary_server:
-    - ip: 192.168.8.153
-      port: '50000'
-      failed: 0
-    - ip: 192.168.8.156
-      port: '50000'
-      failed: 0
-    - ip: 192.168.8.243
-      port: '50000'
-      failed: 0
-    - ip: 192.168.8.156
-      port: '50000'
-      failed: 3
-    - ip: 192.168.8.243
-      port: '50000'
-      failed: 3
-    - ip: 192.168.8.156
-      port: '50000'
-      failed: 2
-    - ip: 192.168.8.243
-      port: '50000'
-      failed: 2
-    - ip: 192.168.8.156
-      port: '50000'
-      failed: 1
-    - ip: 192.168.8.243
-      port: '50000'
-      failed: 1
+  primary_server: []
   secondary_server:
     - ip: "115.190.87.48"
       port: 50000
@@ -65,7 +38,7 @@ optimize_connection_interval: 300  # 优化连接间隔(秒)
 
 primary_max_retries: 5  # 主服务器最大失败次数
 
-scan_threads: 50  # 扫描线程数
+scan_threads: 128  # 扫描线程数
 
 connection_time_window: 60  # 连接时间窗口（秒）
 connection_max_attempts: 5  # 最大连接尝试次数
