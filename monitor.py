@@ -36,7 +36,7 @@ def register_apps(self):
     self.app_list.append(mha)
     self.install_app(mha, autostartup=True)
 
-    sa = STPApp(self)
+    sa = STPApp(self, hash_verification=False)
     self.app_list.append(sa)
     self.install_app(sa, autostartup=True)
 

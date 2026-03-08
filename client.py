@@ -37,7 +37,7 @@ def register_apps(self):
     self.app_list.append(ca)
     self.install_app(ca, autostartup=False)
 
-    sa = STPApp(self)
+    sa = STPApp(self, hash_verification=False)
     self.app_list.append(sa)
     self.install_app(sa, autostartup=True)
 
@@ -58,6 +58,6 @@ def register_apps(self):
 
 if __name__ == '__main__':
     # 创建系统实例，装饰器会自动执行应用注册
-    system = System()
+    system = System(enable_repl=True)
     system.run()
 
